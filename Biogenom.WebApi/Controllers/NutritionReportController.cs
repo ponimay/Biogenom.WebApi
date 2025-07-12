@@ -16,7 +16,7 @@ namespace Biogenom.WebApi.Controllers
             _context = context;
         }
 
-        // Последний отчёт
+        // Вывести последний отчёт
         [HttpGet("last")]
         public async Task<ActionResult<NutritionReportDto>> GetLastReport()
         {
@@ -94,6 +94,25 @@ namespace Biogenom.WebApi.Controllers
             _context.NutritionReports.Add(report);
             await _context.SaveChangesAsync();
             return CreatedAtAction(nameof(GetLastReport), new { id = report.Id }, null);
+        }
+
+        // Удалить последний отчёт
+        [HttpDelete("last")]
+        public async Task<IActionResult> DeleteLastReport()
+        {
+            var report = await _context.NutritionReports
+                .Include(r => r.Elements)
+                .Include(r => r.PersonalizedSet)
+                .Include(r => r.PersonalizedElementValues)
+                .OrderByDescending(r => r.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (report == null)
+                return NotFound();
+
+            _context.NutritionReports.Remove(report);
+            await _context.SaveChangesAsync();
+            return NoContent();
         }
 
         // Преимущества приема БАДов

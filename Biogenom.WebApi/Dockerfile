@@ -1,32 +1,23 @@
-# См. статью по ссылке https://aka.ms/customizecontainer, чтобы узнать как настроить контейнер отладки и как Visual Studio использует этот Dockerfile для создания образов для ускорения отладки.
-
-# В зависимости от операционной системы хост-компьютеров, которые будут выполнять сборку контейнеров или запускать их, может потребоваться изменить образ, указанный в инструкции FROM.
-# Дополнительные сведения см. на странице https://aka.ms/containercompat
-
-# Этот этап используется при запуске из VS в быстром режиме (по умолчанию для конфигурации отладки)
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-nanoserver-1809 AS base
+# установка sdk
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /app
-EXPOSE 8080
-EXPOSE 8081
 
+# установка зависимостей
+COPY Biogenom.WebApi/*.csproj ./Biogenom.WebApi/
+RUN dotnet restore ./Biogenom.WebApi/Biogenom.WebApi.csproj
 
-# Этот этап используется для сборки проекта службы
-FROM mcr.microsoft.com/dotnet/sdk:8.0-nanoserver-1809 AS build
-ARG BUILD_CONFIGURATION=Release
-WORKDIR /src
-COPY ["Biogenom.WebApi/Biogenom.WebApi.csproj", "Biogenom.WebApi/"]
-RUN dotnet restore "./Biogenom.WebApi/Biogenom.WebApi.csproj"
-COPY . .
-WORKDIR "/src/Biogenom.WebApi"
-RUN dotnet build "./Biogenom.WebApi.csproj" -c %BUILD_CONFIGURATION% -o /app/build
+# перевод в единый образ
+COPY Biogenom.WebApi/. ./Biogenom.WebApi/
+WORKDIR /app/Biogenom.WebApi
 
-# Этот этап используется для публикации проекта службы, который будет скопирован на последний этап
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./Biogenom.WebApi.csproj" -c %BUILD_CONFIGURATION% -o /app/publish /p:UseAppHost=false
+# бронирование 80 порта
+EXPOSE 80
 
-# Этот этап используется в рабочей среде или при запуске из VS в обычном режиме (по умолчанию, когда конфигурация отладки не используется)
-FROM base AS final
+# сборка
+RUN dotnet publish -c Release -o out
+
+# запуск
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/Biogenom.WebApi/out ./
 ENTRYPOINT ["dotnet", "Biogenom.WebApi.dll"]

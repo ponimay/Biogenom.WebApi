@@ -21,7 +21,7 @@ services:
       - db
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=db;Port=8080;Database=biogenom;Username=postgres;Password=postgres
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=biogenom;Username=postgres;Password=postgres
     ports:
       - "8080:80"
     command: ["sh", "-c", "sleep 10 && dotnet Biogenom.WebApi.dll"]
